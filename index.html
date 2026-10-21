@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}html,body{margin:0}[hidden]{display:none!important}</style>
+<title>محاكي الجهاز المركزي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: answer-sheet (OMR) exam simulator. Sticky brand bar, navy hero, one question per screen with a bubble-grid navigator beside it, results with a ring score and an expandable per-choice review. */
+:root{
+  --bg:#EDF1F5; --surface:#FFFFFF; --surface-2:#F4F7FA; --ink:#0F2238; --ink-2:#4A5D73; --line:#D3DCE6;
+  --brand:#14406E; --brand-ink:#FFFFFF; --hero:#0F2F52; --hero-ink:#FFFFFF;
+  --accent:#E3A400; --accent-ink:#1B1400; --accent-soft:#FFF1CC;
+  --ok:#14804F; --ok-soft:#DCF2E6; --bad:#B63434; --bad-soft:#FADFDF;
+  --wa:#12803F; --wa-ink:#FFFFFF;
+  --display:'Cairo','Segoe UI',Tahoma,sans-serif; --body:'IBM Plex Sans Arabic','Segoe UI',Tahoma,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0A1520; --surface:#112131; --surface-2:#17293B; --ink:#E9EFF5; --ink-2:#9DB0C3; --line:#274058;
+  --brand:#7DB4EE; --brand-ink:#08182A; --hero:#0D2740; --hero-ink:#FFFFFF;
+  --accent:#F2B93B; --accent-ink:#1B1400; --accent-soft:#3A2F10;
+  --ok:#4CC38A; --ok-soft:#10382A; --bad:#F28585; --bad-soft:#40191C;
+  --wa:#2BC36B; --wa-ink:#052313; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0A1520; --surface:#112131; --surface-2:#17293B; --ink:#E9EFF5; --ink-2:#9DB0C3; --line:#274058;
+  --brand:#7DB4EE; --brand-ink:#08182A; --hero:#0D2740; --hero-ink:#FFFFFF;
+  --accent:#F2B93B; --accent-ink:#1B1400; --accent-soft:#3A2F10;
+  --ok:#4CC38A; --ok-soft:#10382A; --bad:#F28585; --bad-soft:#40191C;
+  --wa:#2BC36B; --wa-ink:#052313; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.75 var(--body);direction:rtl;min-height:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:40;background:var(--surface)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{width:100%;max-width:1080px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.num,.tab{font-variant-numeric:tabular-nums}
+bdi,.ltr{unicode-bidi:plaintext}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:62px;padding-block:8px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand svg{flex:none}
+.brand b{display:block;font:800 19px/1.2 var(--display)}
+.brand small{display:block;color:var(--ink-2);font-size:12.5px;line-height:1.35}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:8px 20px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-weight:600;text-decoration:none;color:var(--ink);transition:transform .12s,background .12s}
+.btn:hover{background:var(--surface-2)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.primary:hover{filter:brightness(1.08);background:var(--brand)}
+.btn.gold{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.btn.gold:hover{background:var(--accent);filter:brightness(1.06)}
+.btn.wa{background:var(--wa);border-color:var(--wa);color:var(--wa-ink);font-weight:700}
+.btn.wa:hover{background:var(--wa);filter:brightness(1.08)}
+.btn.sm{min-height:38px;padding:4px 14px;font-size:14.5px}
+.btn.big{min-height:54px;font-size:18px;padding-inline:30px;font-family:var(--display);font-weight:800}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn svg{flex:none}
+
+/* hero */
+.hero{background:var(--hero);color:var(--hero-ink)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:28px;align-items:center;padding-block:38px}
+.eyebrow{display:inline-block;font:700 13px/1 var(--display);letter-spacing:.04em;color:var(--accent);margin-bottom:12px}
+.hero h1{font:900 clamp(28px,5.2vw,46px)/1.3 var(--display);margin:0 0 10px;text-wrap:balance}
+.hero p{margin:0;font-size:17px;opacity:.9;max-width:52ch}
+.omr{display:flex;gap:12px}
+.omr span{width:52px;height:52px;border-radius:50%;border:2.5px solid color-mix(in srgb,var(--hero-ink) 70%,transparent);display:grid;place-items:center;font:800 20px var(--display)}
+.omr span.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+/* start */
+.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;padding-block:24px 48px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;min-width:0}
+.card h2{font:800 20px/1.4 var(--display);margin:0 0 14px}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:0 0 22px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.facts div{padding:12px 8px;text-align:center;border-inline-start:1px solid var(--line)}
+.facts div:first-child{border-inline-start:0}
+.facts b{display:block;font:900 26px/1.2 var(--display);color:var(--brand)}
+.facts span{font-size:13.5px;color:var(--ink-2)}
+.modes{display:grid;gap:10px;margin-bottom:16px}
+.mode{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid var(--line);border-radius:12px;cursor:pointer;background:var(--surface)}
+.mode:has(input:checked){border-color:var(--brand);background:var(--surface-2)}
+.mode input{margin-top:6px;width:18px;height:18px;accent-color:var(--brand);flex:none}
+.mode b{display:block;font:800 17px/1.4 var(--display)}
+.mode span{color:var(--ink-2);font-size:14.5px;line-height:1.6}
+.check{display:flex;align-items:center;gap:10px;margin-bottom:22px;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--brand)}
+.secs{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:8px}
+.secs li{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;background:var(--surface-2);border-radius:10px;font-size:15px}
+.secs li b{color:var(--brand);font-family:var(--display)}
+.contact p{margin:0 0 14px;color:var(--ink-2);font-size:15px}
+.phone{display:block;font:800 22px/1.3 var(--display);letter-spacing:.02em;direction:ltr;text-align:right;margin-bottom:14px}
+.note{font-size:13.5px;color:var(--ink-2);margin:14px 0 0}
+
+/* exam */
+.examhead{padding-block:16px 6px}
+.prog{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--brand);border-radius:99px;transition:width .25s}
+.tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.timer{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:99px;background:var(--surface);border:1.5px solid var(--line);font:800 18px/1.4 var(--display);font-variant-numeric:tabular-nums;direction:ltr}
+.timer.low{border-color:var(--bad);color:var(--bad);background:var(--bad-soft)}
+.pill{display:inline-flex;align-items:center;padding:3px 12px;border-radius:99px;font-size:13.5px;font-weight:600;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2)}
+.pill.gold{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.exam{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;padding-block:12px 56px;align-items:start}
+.qcard{padding:24px}
+.qmeta{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.qtext{font:700 clamp(19px,2.8vw,25px)/1.65 var(--display);margin:0 0 20px;text-wrap:pretty}
+.choices{display:grid;gap:10px}
+.choice{display:flex;align-items:flex-start;gap:14px;width:100%;text-align:right;padding:12px 14px;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;min-height:56px}
+.choice:hover:not([disabled]){border-color:var(--brand);background:var(--surface-2)}
+.choice[disabled]{cursor:default}
+.bubble{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--ink-2);display:grid;place-items:center;font:800 16px/1 var(--display);color:var(--ink-2);margin-top:1px}
+.ctext{flex:1;min-width:0;padding-top:3px;font-size:17px;line-height:1.6;unicode-bidi:plaintext;overflow-wrap:anywhere}
+.choice.sel{border-color:var(--brand);background:var(--surface-2)}
+.choice.sel .bubble{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.choice.right{border-color:var(--ok);background:var(--ok-soft)}
+.choice.right .bubble{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .bubble{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.tag{flex:none;font-size:12.5px;font-weight:700;padding:2px 10px;border-radius:99px;margin-top:5px}
+.tag.ok{background:var(--ok);color:var(--surface)}
+.tag.bad{background:var(--bad);color:var(--surface)}
+.flagbtn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.actions{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:22px}
+.actions .grow{display:flex;gap:10px;flex-wrap:wrap}
+.nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 74px);display:block}
+.nav h3{font:800 17px/1.4 var(--display);margin:0 0 12px}
+.cells{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.cell{position:relative;aspect-ratio:1;min-width:0;border-radius:50%;border:2px solid var(--line);background:var(--surface);font:700 14px var(--display);font-variant-numeric:tabular-nums;color:var(--ink-2);padding:0}
+.cell.ans{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.cell.ok{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.cell.bad{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.cell.cur{outline:3px solid var(--accent);outline-offset:2px}
+.cell.flag::after{content:"";position:absolute;top:-3px;inset-inline-end:-3px;width:11px;height:11px;border-radius:50%;background:var(--accent);border:2px solid var(--surface)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0;font-size:13px;color:var(--ink-2)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-inline-end:5px;vertical-align:-1px}
+.expbox{margin-top:18px;border-top:1px dashed var(--line);padding-top:16px}
+.exp{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:10px}
+.exp li{display:flex;gap:12px;padding:12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line)}
+.exp li.ok{background:var(--ok-soft);border-color:var(--ok)}
+.exp li .bubble{width:30px;height:30px;font-size:14px;margin-top:0}
+.exp li.ok .bubble{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.exp b{display:block;font-size:15.5px;unicode-bidi:plaintext}
+.exp p{margin:2px 0 0;font-size:15px;color:var(--ink-2);line-height:1.7}
+.exp li.ok p{color:var(--ink)}
+.navtoggle{display:none}
+.cell[disabled]{cursor:default}
+.qbar{height:7px;border-radius:99px;background:var(--line);overflow:hidden;margin-bottom:16px}
+.qbar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .2s linear}
+.qbar i.low{background:var(--bad)}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(6,14,24,.62);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dialog{background:var(--surface);border-radius:18px;padding:26px;max-width:440px;width:100%;border:1px solid var(--line)}
+.dialog h2{font:800 22px/1.4 var(--display);margin:0 0 10px}
+.dialog p{margin:0 0 20px;color:var(--ink-2)}
+.dialog .row{display:flex;gap:10px;flex-wrap:wrap}
+
+/* result */
+.res{display:grid;grid-template-columns:auto minmax(0,1fr);gap:28px;align-items:center;padding:26px}
+.ring{position:relative;width:190px;height:190px}
+.ring svg{display:block;width:100%;height:100%}
+.ring .mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring .mid b{font:900 44px/1 var(--display)}
+.ring .mid span{font-size:14px;color:var(--ink-2)}
+.verdict{display:inline-block;font:800 15px/1 var(--display);padding:7px 16px;border-radius:99px;margin-bottom:10px}
+.verdict.ok{background:var(--ok);color:var(--surface)}
+.verdict.bad{background:var(--bad);color:var(--surface)}
+.res h1{font:900 clamp(24px,4vw,34px)/1.35 var(--display);margin:0 0 6px}
+.res p{margin:0 0 16px;color:var(--ink-2)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.chips .pill{font-size:14.5px;padding:5px 14px}
+.row2{display:flex;gap:10px;flex-wrap:wrap}
+.bars{display:grid;gap:14px;margin-top:6px}
+.brow .top2{display:flex;justify-content:space-between;gap:8px;font-size:15px;margin-bottom:5px}
+.brow .top2 b{font-family:var(--display)}
+.pad{padding-block:22px 56px;display:grid;gap:20px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tabbtn{padding:6px 16px;border-radius:99px;border:1.5px solid var(--line);background:var(--surface);font-weight:600;font-size:14.5px}
+.tabbtn[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.rv{padding:20px;margin-bottom:14px}
+.rvh{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+.rvn{flex:none;min-width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font:800 16px var(--display);background:var(--surface-2);border:1px solid var(--line)}
+.rvn.ok{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.rvn.bad{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.rvq{flex:1;min-width:0;font:700 18px/1.65 var(--display)}
+.rvq small{display:block;font:500 13px var(--body);color:var(--ink-2)}
+.empty{padding:30px;text-align:center;color:var(--ink-2)}
+
+@media (max-width:899px){
+  .exam{grid-template-columns:minmax(0,1fr)}
+  .nav{position:static;order:-1;display:none}
+  .nav.open{display:block}
+  .navtoggle{display:inline-flex}
+}
+@media (max-width:700px){
+  .hero .wrap{grid-template-columns:minmax(0,1fr);padding-block:28px}
+  .omr{display:none}
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .res{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}
+  .chips,.row2{justify-content:center}
+  .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .facts div:nth-child(3){border-inline-start:0}
+  .facts div:nth-child(n+3){border-top:1px solid var(--line)}
+  .qcard{padding:18px}
+  .brand small{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div id="root" dir="rtl" lang="ar"></div>
+
+<script>
+const L=['أ','ب','ج','د'];
+const SEC=['الإكسل','أساسيات الكمبيوتر','الإنترنت والإيميل','الأكسس','الباوربوينت','الوورد'];
+const WA='201063657404', PHONE='01063657404';
+
+/* [قسم, السؤال, الاختيارات, رقم الإجابة الصحيحة, شرح كل اختيار] */
+const RAW=[
+[0,"الملف الذي يحتوي على عدد من أوراق العمل يسمى:",["ورقة عمل","خلية","مصنف (Workbook)","جدول"],2,
+ ["ورقة العمل (Worksheet) صفحة واحدة داخل الملف، وليست الملف نفسه.","الخلية هي تقاطع صف مع عمود، وهي أصغر وحدة في الورقة.","المصنف (Workbook) هو ملف Excel بالكامل، ويضم ورقة عمل واحدة أو أكثر.","الجدول نطاق بيانات منسق داخل ورقة العمل، وليس ملفاً."]],
+[0,"أصغر وحدة في ورقة العمل تسمى:",["صفحة","ورقة العمل","المصنف","خلية"],3,
+ ["كلمة الصفحة تخص الطباعة والوورد، وليست وحدة بناء في الإكسل.","ورقة العمل تحتوي ملايين الخلايا، فهي أكبر من الخلية.","المصنف هو الملف كله ويضم الأوراق.","الخلية أصغر وحدة تُخزَّن فيها البيانات، وتنتج من تقاطع صف مع عمود."]],
+[0,"الخلية AF17 في Excel عبارة عن:",["ورقة AF","صف AF مع عمود 17","عمود AF مع صف 17","خلية في كل الصفوف"],2,
+ ["AF ليس اسم ورقة؛ فالأوراق تسمى Sheet1 وهكذا.","الأعمدة تُرمَّز بحروف والصفوف بأرقام، فـ AF عمود وليس صفاً.","الحروف AF تحدد العمود، والرقم 17 يحدد الصف، والعنوان هو نقطة تقاطعهما.","العنوان يشير إلى خلية واحدة محددة، وليس إلى كل الصفوف."]],
+[0,"عدد الصفوف في ورقة العمل (الإصدارات الحديثة):",["26","256","1,048,576","12,834"],2,
+ ["26 هو عدد حروف الأبجدية الإنجليزية، وليس عدد الصفوف.","256 كان عدد الأعمدة في الإصدارات القديمة (Excel 2003).","في Excel 2007 وما بعده يبلغ عدد الصفوف 1,048,576 صفاً.","رقم عشوائي لا يمثل حداً في الإكسل."]],
+[0,"ما هو اسم آخر عمود في ورقة العمل ببرنامج Excel؟",["ZZZ","XFD","ZYX","XLL"],1,
+ ["الأعمدة تنتهي عند XFD، فـ ZZZ يقع بعدها ولا وجود له.","آخر عمود في Excel الحديث هو XFD، وهو العمود رقم 16,384.","ZYX يقع بعد XFD أبجدياً، فلا وجود له كعمود.","XLL يقع بعد XFD فلا وجود له كعمود، وهو أيضاً امتداد لملفات الوظائف الإضافية."]],
+[0,"ما هو امتداد الملف الذي يحتوي على ماكرو في Excel؟",["XLSX","XLSB","XML","XLSM"],3,
+ ["XLSX هو الامتداد الافتراضي للمصنفات العادية، ولا يحفظ الماكرو.","XLSB صيغة ثنائية لتقليل حجم الملف، والإجابة المعتمدة في الاختبار هي XLSM.","XML صيغة لتبادل البيانات، وليست صيغة مصنف Excel.","XLSM هو امتداد المصنف الذي يدعم الماكرو (Macro-Enabled)."]],
+[0,"اختصار فتح مربع تنسيق الخلايا Format Cells:",["CTRL + F","CTRL + 1","ALT + 1","CTRL + SHIFT + F"],1,
+ ["Ctrl + F يفتح نافذة البحث Find.","Ctrl + 1 هو الاختصار القياسي لفتح مربع تنسيق الخلايا.","Alt + 1 ليس اختصاراً لتنسيق الخلايا.","Ctrl + Shift + F يفتح نافذة التنسيق على تبويب الخط تحديداً، لكن الاختصار المعتمد هو Ctrl + 1."]],
+[0,"ما هو الاختصار المستخدم لإدخال الوقت الحالي في Excel؟",["Ctrl + ;","Ctrl + Shift + :","Alt + Shift + T","Ctrl + T"],1,
+ ["Ctrl + ; يدخل تاريخ اليوم وليس الوقت.","Ctrl + Shift + : يدخل الوقت الحالي في الخلية.","Alt + Shift + T غير مخصص لإدخال الوقت.","Ctrl + T ينشئ جدولاً (Table) من النطاق المحدد."]],
+[0,"عندما تحاول الصيغة القسمة على صفر، ما رمز الخطأ الذي سيظهر؟",["#REF","#DIV/0","#VALUE","#NUM"],1,
+ ["#REF! يظهر عند حذف خلية أو نطاق مستخدم في صيغة.","#DIV/0! يظهر عند القسمة على صفر أو على خلية فارغة.","#VALUE! يظهر عند استخدام نوع بيانات غير مناسب، كجمع رقم مع نص.","#NUM! يظهر عند استخدام رقم غير صالح أو كبير جداً أو صغير جداً."]],
+[0,"ما نوع الرسم البياني المفيد لمقارنة الأجزاء كجزء من الكل؟",["مخطط خطي","مخطط عمودي","مخطط نصفي","مخطط دائري"],3,
+ ["المخطط الخطي يعرض تغير القيم عبر الزمن.","المخطط العمودي يقارن القيم بين الفئات المختلفة.","المخطط النصفي صورة جزئية من الدائري، وليس الإجابة المعتمدة هنا.","المخطط الدائري يقسم الدائرة إلى شرائح، وكل شريحة تمثل نسبة جزء من المجموع."]],
+
+[1,"أي من الذاكرات التالية تُعد ذاكرة متطايرة؟",["RAM","ROM","Register","Hard Disk"],0,
+ ["RAM ذاكرة متطايرة، تفقد محتوياتها عند انقطاع الكهرباء، وهي المثال الأشهر.","ROM ذاكرة غير متطايرة تحتفظ بمحتواها دائماً.","المسجلات (Register) متطايرة أيضاً من الناحية التقنية، لكن الإجابة المعتمدة في النموذج هي RAM.","القرص الصلب وسيط تخزين دائم، يحتفظ بالبيانات بعد الإطفاء."]],
+[1,"أي من الذاكرات التالية تُستخدم لتخزين البيانات بشكل دائم ولا يمكن تعديل محتواها؟",["RAM","Cache Memory","ROM","VRAM"],2,
+ ["RAM مؤقتة، وتُفقد بياناتها عند الإطفاء.","الكاش ذاكرة سريعة مؤقتة بين المعالج والـ RAM.","ROM ذاكرة للقراءة فقط، تحتفظ بمحتواها دائماً ولا يعدَّل بسهولة.","VRAM ذاكرة كرت الشاشة، وتحتفظ بالصور مؤقتاً."]],
+[1,"أي من الذاكرات التالية تُعتبر أسرع في الوصول إلى البيانات؟",["ROM","HDD","SSD","Cache Memory"],3,
+ ["ROM أبطأ بكثير من الكاش.","HDD قرص ميكانيكي، من أبطأ وسائط التخزين.","SSD أسرع من HDD، لكنه أبطأ من الكاش.","الكاش هو الأسرع لأنه قريب جداً من المعالج، ويحفظ البيانات كثيرة الاستخدام."]],
+[1,"الـ BIOS هو جزء من:",["RAM","ROM","LAN","WAN"],1,
+ ["RAM مؤقتة، بينما يجب أن يبقى الـ BIOS محفوظاً بعد الإطفاء.","الـ BIOS مخزن في شريحة ROM، ولذلك لا يضيع عند إطفاء الجهاز.","LAN نوع من الشبكات وليس ذاكرة.","WAN نوع من الشبكات وليس ذاكرة."]],
+[1,"الجزء المسؤول عن العمليات الحسابية والمنطقية في المعالج هو:",["وحدة التحكم","وحدة الحساب والمنطق","المسجل","ذاكرة الكاش"],1,
+ ["وحدة التحكم توجه تنفيذ التعليمات ولا تجري العمليات الحسابية.","وحدة الحساب والمنطق (ALU) تنفذ العمليات الحسابية كالجمع والطرح، والمنطقية كالمقارنة.","المسجل يخزن بيانات مؤقتة داخل المعالج.","ذاكرة الكاش تسرّع وصول المعالج للبيانات."]],
+[1,"سرعة المعالج (CPU) تُقاس بـ:",["بيكو هرتز","جيجاهرتز","تيرابايت","ميليمتر"],1,
+ ["بيكو هرتز وحدة صغيرة جداً لا تُستخدم لقياس سرعة المعالجات.","سرعة المعالج تُقاس بالجيجاهرتز (GHz)، أي مليار دورة في الثانية.","التيرابايت وحدة لقياس سعة التخزين.","الميليمتر وحدة طول."]],
+[1,"ما الفرق الأساسي بين HDD و SSD؟",["SSD أبطأ دائماً","HDD لا يُستخدم للتخزين","SSD لا يحتوي على أجزاء ميكانيكية","HDD أسرع دائماً"],2,
+ ["SSD أسرع عادةً من HDD، وليس أبطأ.","HDD يُستخدم للتخزين، وهذه وظيفته الأساسية.","SSD يعتمد على شرائح فلاش ولا يحتوي أجزاء متحركة، بعكس HDD ذي الأقراص الدوارة.","HDD أبطأ من SSD بسبب أجزائه الميكانيكية."]],
+[1,"ما هو نظام التشغيل المفتوح المصدر الذي يتميز بتوزيع مجاني وحر؟",["Windows","Chrome OS","Mac OS","Linux"],3,
+ ["Windows نظام تجاري مدفوع من مايكروسوفت.","Chrome OS نظام جوجل لأجهزة Chromebook ويأتي مع الأجهزة، وليس هو النظام الحر المعروف.","Mac OS نظام تجاري مغلق من آبل.","Linux نظام مفتوح المصدر يوزَّع مجاناً، ويُستخدم في الخوادم والحواسيب."]],
+[1,"نظام التشغيل الذي يعمل به نظام أندرويد هو:",["Windows","Android OS","macOS","Linux"],1,
+ ["Windows نظام مايكروسوفت للحواسيب.","Android OS هو نظام التشغيل الذي تعمل به أجهزة أندرويد.","macOS نظام آبل لأجهزة ماك.","Linux هو النواة التي بُني عليها أندرويد، لكن النظام نفسه اسمه Android OS."]],
+[1,"أي من أنظمة التشغيل التالية لا يدعم واجهة المستخدم الرسومية (GUI) ويعتمد على لوحة المفاتيح فقط؟",["macOS","Windows","DOS","Linux"],2,
+ ["macOS نظام بواجهة رسومية.","Windows نظام بواجهة رسومية قائمة على النوافذ.","DOS نظام قديم يعتمد على كتابة الأوامر بلوحة المفاتيح بلا واجهة رسومية.","Linux يدعم واجهات رسومية متعددة."]],
+[1,"نظام Mac هو:",["برنامج مساعد","برنامج وسائط متعددة","نظام تشغيل","نظام ويندوز"],2,
+ ["البرنامج المساعد يؤدي مهمة محدودة، وليس هذا هو Mac.","Mac ليس برنامج وسائط متعددة.","Mac (macOS) نظام تشغيل من شركة آبل.","ويندوز نظام تشغيل مختلف من مايكروسوفت."]],
+[1,"ما هو التشفير (Encryption)؟",["عملية تحويل البيانات إلى صيغة غير قابلة للقراءة للحماية","نسخ البيانات","حذف الملفات","فتح الملفات"],0,
+ ["التشفير يحول البيانات إلى صيغة غير مفهومة إلا لمن يملك المفتاح، بهدف حمايتها.","نسخ البيانات هو النسخ الاحتياطي، وليس التشفير.","حذف الملفات إزالة لها وليس تشفيراً.","فتح الملفات عملية عادية لا علاقة لها بالتشفير."]],
+[1,"ما هو الفيروس الحاسوبي؟",["برنامج مفيد لتسريع الحاسوب","برنامج خبيث يمكنه إلحاق الضرر بالحاسوب أو سرقة البيانات","جزء من نظام التشغيل","ملف مضغوط"],1,
+ ["هذا وصف برامج التنظيف والتسريع.","الفيروس برنامج خبيث يضر بالجهاز أو يسرق البيانات، وقد ينتشر بين الملفات.","الفيروس ليس جزءاً من نظام التشغيل.","الملف المضغوط يقلل حجم الملف فقط."]],
+[1,"ما هو تعريف لغة البرمجة Python؟",["نظام تشغيل","برنامج تصفح","لغة برمجة عالية المستوى تستخدم لتطوير البرامج والتطبيقات","جهاز تخزين"],2,
+ ["نظام التشغيل مثل Windows وLinux.","برنامج التصفح مثل Chrome.","Python لغة برمجة عالية المستوى، سهلة القراءة، لتطوير البرامج والتطبيقات.","جهاز التخزين مثل القرص الصلب."]],
+
+[2,"ما هو الإنترنت؟",["شبكة محلية صغيرة تربط بعض الأجهزة","برنامج لتشغيل الألعاب","شبكة عالمية تربط الحواسيب والأجهزة معاً حول العالم","جهاز لتخزين الملفات فقط"],2,
+ ["هذا وصف الشبكة المحلية LAN.","الإنترنت ليس برنامج ألعاب.","الإنترنت شبكة عالمية تربط ملايين الحواسيب والأجهزة معاً.","الإنترنت أوسع بكثير من تخزين الملفات."]],
+[2,"ما هو نوع الشبكة التي تربط أجهزة الحاسبات بين المدن والبلدان وحتى القارات؟",["LAN","WAN","MAN","WLAN"],1,
+ ["LAN تغطي مكاناً صغيراً كمنزل أو مدرسة.","WAN شبكة واسعة تربط المدن والدول والقارات، والإنترنت أشهر أمثلتها.","MAN تغطي مدينة واحدة تقريباً.","WLAN شبكة محلية لاسلكية."]],
+[2,"الشبكة التي تربط أجهزة الحاسبات في منطقة جغرافية صغيرة هي شبكة:",["LAN","WAN","TAN","NIC"],0,
+ ["LAN تربط الأجهزة في منطقة صغيرة كمكتب أو مدرسة.","WAN تغطي مساحات جغرافية كبيرة.","TAN ليس نوعاً معروفاً من الشبكات في المنهج.","NIC هو كرت الشبكة، وهو قطعة داخل الجهاز وليس نوع شبكة."]],
+[2,"URL اختصار لـ:",["محدد موقع الموارد","رابط المستخدم","عنوان الملف","موقع الشبكة"],0,
+ ["URL يعني Uniform Resource Locator أي محدد موقع الموارد، وهو عنوان الصفحة على الويب.","URL ليس رابط المستخدم.","التعبير غير دقيق؛ المصطلح المعتمد هو محدد موقع الموارد.","موقع الشبكة هو الموقع نفسه، أما URL فهو عنوانه."]],
+[2,"ما هو البروتوكول المستخدم لتأمين الاتصالات على شبكة الإنترنت؟",["HTTPS","HTTP","FTP","SMTP"],0,
+ ["HTTPS هو HTTP مضافاً إليه تشفير SSL/TLS لتأمين الاتصال.","HTTP ينقل البيانات بدون تشفير.","FTP بروتوكول لنقل الملفات.","SMTP بروتوكول لإرسال البريد الإلكتروني."]],
+[2,"ما هو رقم المنفذ الافتراضي المستخدم بواسطة بروتوكول HTTPS؟",["80","443","508","600"],1,
+ ["80 هو منفذ HTTP العادي.","443 هو المنفذ الافتراضي لبروتوكول HTTPS.","508 ليس منفذاً قياسياً.","600 غير مستخدم افتراضياً لهذا الغرض."]],
+[2,"ما المقصود بـ FTP؟",["Internet Protocol","File Transfer Protocol","Internal Program","Input Processing"],1,
+ ["Internet Protocol هو الاسم الكامل لـ IP.","FTP هو File Transfer Protocol أي بروتوكول نقل الملفات.","Internal Program تسمية غير صحيحة.","Input Processing تسمية غير صحيحة."]],
+[2,"لكل NIC رقم لا يتغير يسمى:",["IP Address","Mac Address","Subnet Mask","Gateway"],1,
+ ["IP Address عنوان منطقي قد يتغير حسب الشبكة.","MAC Address رقم فريد مخزن في كرت الشبكة NIC ولا يتغير عادةً.","Subnet Mask يحدد جزء الشبكة من عنوان IP.","Gateway بوابة الاتصال بشبكة أخرى."]],
+
+[3,"أي برنامج يُستخدم لتصميم قواعد البيانات وتخزين البيانات وإدارتها؟",["Ms Word","Ms Access","Ms PowerPoint","Ms Excel"],1,
+ ["Word لمعالجة النصوص.","Access لتصميم قواعد البيانات وتخزينها وإدارتها وربط جداولها بعلاقات.","PowerPoint للعروض التقديمية.","Excel للجداول الحسابية، وليس نظام قواعد بيانات علائقية متكاملاً."]],
+[3,"ما هي الوحدة الأساسية التي تُمثل المعلومات في قاعدة البيانات؟",["الجدول","السجل","الحقل","النموذج"],2,
+ ["الجدول يضم السجلات والحقول، وهو الكائن الأساسي في القاعدة.","السجل صف كامل من البيانات.","الحقل هو الوحدة الأساسية التي تمثل معلومة واحدة كالاسم، وهو عمود في الجدول.","النموذج واجهة لإدخال البيانات وعرضها."]],
+[3,"السجل (Record) في برنامج Access يتكوّن من:",["عدة جداول","عدة نماذج","صف واحد من عدة حقول","عدة تقارير"],2,
+ ["الجداول هي التي تضم السجلات، وليس العكس.","النماذج واجهات إدخال وعرض.","السجل صف واحد يضم عدة حقول تخص عنصراً واحداً، كطالب واحد.","التقارير تُستخدم للعرض المنسق والطباعة."]],
+[3,"أي من التالي يتيح لنا عرض البيانات من جدول بناءً على معيار محدد؟",["استعلام (Query)","نموذج","ماكرو","تقرير"],0,
+ ["الاستعلام Query يعرض البيانات المطابقة لمعيار محدد.","النموذج لإدخال البيانات وعرضها بشكل مريح.","الماكرو ينفذ أوامر بشكل آلي.","التقرير يعرض البيانات منسقة للطباعة."]],
+[3,"ما الغرض من خيار الحذف المتتالي Cascade Delete في قاعدة بيانات Access؟",["حذف جميع السجلات في كل الجداول","تكرار عملية الحذف الأخيرة","حذف السجلات المرتبطة تلقائياً عند حذف السجل الأساسي","حذف الجداول"],2,
+ ["الحذف المتتالي لا يمسح كل الجداول، بل المرتبط فقط.","لا علاقة له بتكرار الحذف.","عند حذف السجل الأساسي يحذف Access تلقائياً السجلات المرتبطة به في الجدول الفرعي.","هو يحذف سجلات مرتبطة، ولا يحذف الجداول نفسها."]],
+
+[4,"ما هو اختصار لوحة المفاتيح لبدء عرض الشرائح من الشريحة الأولى في PowerPoint؟",["F2","Shift + F5","Ctrl + F5","F5"],3,
+ ["F2 يستخدم لتحرير النص داخل عنصر.","Shift + F5 يبدأ العرض من الشريحة الحالية وليس الأولى.","Ctrl + F5 ليس اختصاراً لبدء عرض الشرائح.","F5 يبدأ عرض الشرائح من الشريحة الأولى."]],
+[4,"ما هو اختصار لوحة المفاتيح لبدء عرض الشرائح من الشريحة الحالية في PowerPoint؟",["F2","F5","Ctrl + F5","Shift + F5"],3,
+ ["F2 يستخدم لتحرير النص داخل عنصر.","F5 يبدأ العرض من الشريحة الأولى وليس الحالية.","Ctrl + F5 ليس اختصاراً لبدء عرض الشرائح.","Shift + F5 يبدأ العرض من الشريحة الحالية."]],
+[4,"لإيقاف عرض الشرائح في PowerPoint نضغط على المفتاح:",["Enter","Tab","Ctrl","Esc"],3,
+ ["Enter ينتقل إلى الشريحة التالية أثناء العرض.","Tab ينقل التركيز بين العناصر.","Ctrl وحده لا يوقف العرض.","Esc ينهي عرض الشرائح ويعود إلى وضع التحرير."]],
+[4,"لتكرار شريحة في PowerPoint نستخدم:",["Ctrl + C","Ctrl + V","Ctrl + D","Ctrl + N"],2,
+ ["Ctrl + C ينسخ فقط ولا ينشئ شريحة مكررة مباشرة.","Ctrl + V يلصق ما تم نسخه.","Ctrl + D يكرر الشريحة المحددة مباشرة.","Ctrl + N ينشئ عرضاً تقديمياً جديداً."]],
+[4,"في PowerPoint، أي تبويب يُستخدم لإضافة حركات للعناصر داخل الشريحة؟",["حركات (Animations)","إدراج","انتقالات","مراجعة"],0,
+ ["تبويب الحركات Animations يضيف تأثيرات للنصوص والصور داخل الشريحة.","تبويب إدراج لإضافة صور وجداول وأشكال.","الانتقالات Transitions تخص الانتقال بين الشرائح وليس العناصر داخلها.","تبويب مراجعة للتدقيق والتعليقات."]],
+[4,"الاسم الافتراضي لملف جديد في الباوربوينت هو:",["مستند1","عرض تقديمي1","مصنف1","قاعدة بيانات1"],1,
+ ["مستند1 هو الاسم الافتراضي في Word.","عرض تقديمي1 (Presentation1) هو الاسم الافتراضي في PowerPoint.","مصنف1 (Book1) هو الاسم الافتراضي في Excel.","قاعدة بيانات1 هو الاسم الافتراضي في Access."]],
+
+[5,"ما هو امتداد الملف لمستند Microsoft Word؟",["DOCX","DOCM","DOCV","DOCG"],0,
+ ["DOCX هو الامتداد الحالي لمستندات Word.","DOCM امتداد لمستند Word يدعم الماكرو.","DOCV غير موجود.","DOCG غير موجود."]],
+[5,"لإدراج فاصل صفحات في برنامج الوورد نضغط:",["Ctrl Enter","Alt Shift","Ctrl Shift","Alt Enter"],0,
+ ["Ctrl + Enter يدرج فاصل صفحة جديدة.","Alt + Shift يبدل لغة لوحة المفاتيح عادةً.","Ctrl + Shift قد يبدل لغة الإدخال، ولا يدرج فاصل صفحة.","Alt + Enter غير مخصص لفاصل الصفحات."]],
+[5,"لعمل فاصل سطر (سطر جديد) في Microsoft Word نضغط على:",["Ctrl + Enter","Alt + Enter","Shift + Enter","Enter فقط"],2,
+ ["Ctrl + Enter يدرج فاصل صفحة.","Alt + Enter غير مخصص لفاصل السطر.","Shift + Enter يبدأ سطراً جديداً داخل نفس الفقرة.","Enter وحده ينشئ فقرة جديدة وليس مجرد سطر جديد."]],
+[5,"عدد هوامش الصفحة في برنامج Word هو:",["1","2","3","4 (علوي - سفلي - أيمن - أيسر)"],3,
+ ["للصفحة أكثر من هامش واحد.","اثنان لا يكفيان لتحديد حدود الصفحة.","ثلاثة أقل من العدد الصحيح.","للصفحة أربعة هوامش: علوي وسفلي وأيمن وأيسر."]],
+[5,"ما هو اختصار لوحة المفاتيح لحفظ المستند في Microsoft Word؟",["Ctrl + C","Ctrl + V","Ctrl + S","Ctrl + O"],2,
+ ["Ctrl + C للنسخ.","Ctrl + V للصق.","Ctrl + S للحفظ (Save).","Ctrl + O لفتح ملف."]],
+[5,"ما هو اختصار البحث عن الأخطاء الإملائية في مستند؟",["F7","F2","F5","F10"],0,
+ ["F7 يفتح تدقيق الإملاء والنحو في Word.","F2 لا علاقة له بالتدقيق الإملائي.","F5 يفتح نافذة الانتقال (Go To) في Word.","F10 ينشط مفاتيح الشريط."]],
+[5,"في أي شريط من أشرطة Word يظهر إجمالي عدد الصفحات وعدد الكلمات واللغة المستخدمة؟",["شريط التمرير","شريط القوائم","شريط الوصول السريع","شريط الحالة"],3,
+ ["شريط التمرير للتنقل داخل المستند.","شريط القوائم يضم الأوامر الرئيسية.","شريط الوصول السريع يضم أوامر مثل حفظ وتراجع.","شريط الحالة أسفل النافذة يعرض عدد الصفحات والكلمات واللغة."]]
+];
+const Q=RAW.map((r,i)=>({id:i,s:r[0],q:r[1],c:r[2],a:r[3],e:r[4]}));
+const N=Q.length, Q_SECONDS=10, PASS=60;
+
+const S={screen:'start',mode:'exam',shuffle:true,order:[],ans:{},flag:{},cur:0,t0:0,qt0:0,pauseAt:0,elapsed:0,filter:'all',exp:{},navOpen:false,confirm:false,timer:null};
+const root=document.getElementById('root');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=t=>{t=Math.max(0,t);return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')};
+const waLink=t=>`https://wa.me/${WA}?text=${encodeURIComponent(t)}`;
+const WAI='<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5a9.5 9.5 0 0 0-8.1 14.4L2.6 21.5l4.7-1.2A9.5 9.5 0 1 0 12 2.5zm-2.4 5.2c.2 0 .4 0 .5.4l.7 1.700c.1.2.1.4 0 .6l-.4.5c-.1.2-.1.3 0 .5.4.8 1.400 1.800 2.400 2.300.2.1.4.1.5-.1l.6-.8c.1-.2.3-.2.5-.1l1.600.8c.2.1.3.2.3.3 0 .4-.2 1-.9 1.300-.6.3-1.300.3-2.400-.1-1.700-.7-3.100-2.100-4-3.600-.5-.9-.8-1.900-.1-2.700.3-.3.5-.4.7-.4z"/></svg>';
+const MARK='<svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="none" stroke="var(--brand)" stroke-width="3"/><circle cx="18" cy="18" r="8" fill="var(--accent)"/></svg>';
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function stats(){let ok=0,bad=0,skip=0;const sec=SEC.map(()=>({ok:0,n:0}));
+  Q.forEach(q=>{const a=S.ans[q.id];sec[q.s].n++;if(a===undefined)skip++;else if(a===q.a){ok++;sec[q.s].ok++}else bad++});
+  return{ok,bad,skip,sec}}
+
+function topbar(){return `<header class="top"><div class="wrap"><div class="brand">${MARK}<div><b>ببساطه</b><small>إعداد مستر محمد سيد</small></div></div>
+<a class="btn wa sm" href="${waLink('مرحباً مستر محمد، أريد الاستفسار عن اختبارات الجهاز المركزي (معلم مساعد - الحاسب الآلي)')}" target="_blank" rel="noopener">${WAI}<span>واتساب</span></a></div></header>`}
+
+/* ---------- start ---------- */
+function renderStart(){
+  const secList=SEC.map((s,i)=>`<li><span>${s}</span><b class="num">${Q.filter(q=>q.s===i).length} سؤال</b></li>`).join('');
+  return topbar()+`
+<section class="hero"><div class="wrap"><div>
+<span class="eyebrow">اختبار محاكي · تصحيح تلقائي</span>
+<h1>محاكي اختبار الجهاز المركزي للتنظيم والإدارة</h1>
+<p>تخصص معلم مساعد لجميع التخصصات، على محور الحاسب الآلي. ${N} سؤالاً من اختيار من متعدد، مع شرح تفصيلي لكل سؤال ولكل اختيار.</p></div>
+<div class="omr" aria-hidden="true"><span>أ</span><span>ب</span><span class="on">ج</span><span>د</span></div></div></section>
+<main class="wrap grid">
+<section class="card"><h2>جهّز نفسك وابدأ</h2>
+<div class="facts"><div><b class="num">${N}</b><span>سؤال</span></div><div><b class="num">10</b><span>ثواني لكل سؤال</span></div><div><b class="num">${SEC.length}</b><span>محاور</span></div><div><b class="num">${PASS}%</b><span>درجة النجاح</span></div></div>
+<div class="modes">
+<label class="mode"><input type="radio" name="mode" value="exam" ${S.mode==='exam'?'checked':''}><div><b>وضع الاختبار</b><span>10 ثواني لكل سؤال، وينتقل الاختبار تلقائياً للسؤال التالي بدون رجوع. تظهر النتيجة والشرح بعد التسليم.</span></div></label>
+<label class="mode"><input type="radio" name="mode" value="practice" ${S.mode==='practice'?'checked':''}><div><b>وضع التدريب</b><span>بدون مؤقت. يظهر التصحيح بعد كل إجابة مع زر الشرح التفصيلي.</span></div></label>
+</div>
+<label class="check"><input type="checkbox" id="shuf" ${S.shuffle?'checked':''}><span>ترتيب الأسئلة عشوائياً في كل محاولة</span></label>
+<button class="btn gold big" data-a="start">ابدأ الاختبار</button>
+<p class="note">الأسئلة مجمعة من نماذج تدريبية لمحور الحاسب الآلي، وهي للتدريب فقط ولا تمثل أسئلة الاختبار الرسمي بعينها.</p></section>
+<aside style="display:grid;gap:20px;align-content:start;min-width:0">
+<section class="card"><h2>محاور الاختبار</h2><ul class="secs" style="margin:0">${secList}</ul></section>
+<section class="card contact"><h2>تواصل مع مستر محمد سيد</h2><p>للاستفسار عن الشرح والمراجعات والنماذج الإضافية.</p>
+<span class="phone num">${PHONE}</span>
+<a class="btn wa" href="${waLink('مرحباً مستر محمد، أريد الاستفسار عن اختبارات الجهاز المركزي (معلم مساعد - الحاسب الآلي)')}" target="_blank" rel="noopener">${WAI}<span>تواصل عبر واتساب</span></a></section>
+</aside></main>`}
+
+/* ---------- exam ---------- */
+function expHTML(q){
+  return `<ul class="exp">${q.c.map((c,i)=>`<li class="${i===q.a?'ok':''}"><span class="bubble">${L[i]}</span><div><b>${esc(c)} <span style="font-weight:700;color:var(${i===q.a?'--ok':'--bad'})">${i===q.a?'— الإجابة الصحيحة':'— إجابة خاطئة'}</span></b><p>${esc(q.e[i])}</p></div></li>`).join('')}</ul>`}
+
+function renderExam(){
+  const id=S.order[S.cur],q=Q[id],a=S.ans[id];
+  const practice=S.mode==='practice',locked=practice&&a!==undefined;
+  const now=S.confirm?S.pauseAt:Date.now(), ql=Math.max(0,Q_SECONDS-(now-S.qt0)/1000);
+  const answered=Object.keys(S.ans).length;
+  const choices=q.c.map((c,i)=>{
+    let cls='choice',tag='';
+    if(locked){ if(i===q.a){cls+=' right';tag='<span class="tag ok">صحيحة</span>'} else if(i===a){cls+=' wrong';tag='<span class="tag bad">إجابتك</span>'} }
+    else if(a===i) cls+=' sel';
+    return `<button class="${cls}" data-a="pick" data-k="${i}" ${locked?'disabled':''} aria-pressed="${a===i}"><span class="bubble">${L[i]}</span><span class="ctext">${esc(c)}</span>${tag}</button>`}).join('');
+  const cells=S.order.map((qid,i)=>{const x=S.ans[qid];let c='cell';if(i===S.cur)c+=' cur';
+    if(x!==undefined)c+=practice?(x===Q[qid].a?' ok':' bad'):' ans';if(S.flag[qid])c+=' flag';
+    return `<button class="${c}" data-a="go" data-n="${i}" ${practice?'':'disabled'} aria-label="السؤال ${i+1}">${i+1}</button>`}).join('');
+  const last=S.cur===N-1;
+  const timerEl=practice?`<span class="pill gold">وضع التدريب</span>`:`<span class="timer${ql<=3?' low':''}" aria-label="الوقت المتبقي للسؤال"><span id="timer">${Math.ceil(ql)}</span>&nbsp;ث</span><span class="pill">10 ثواني لكل سؤال</span>`;
+  return topbar()+`
+<div class="wrap examhead"><div class="prog"><span>السؤال <b class="num">${S.cur+1}</b> من <b class="num">${N}</b></span><span class="pill num">أجبت عن ${answered}</span></div>
+<div class="bar"><i style="width:${answered/N*100}%"></i></div>
+<div class="tools">${timerEl}<button class="btn sm navtoggle" data-a="navtoggle" aria-expanded="${S.navOpen}">دليل الأسئلة</button></div></div>
+<main class="wrap exam">
+<section class="card qcard" id="qcard">
+${practice?'':`<div class="qbar"><i id="qbar" class="${ql<=3?'low':''}" style="width:${ql/Q_SECONDS*100}%"></i></div>`}
+<div class="qmeta"><span class="pill">${SEC[q.s]}</span>
+${practice?`<button class="btn sm flagbtn" data-a="flag" aria-pressed="${!!S.flag[id]}">${S.flag[id]?'تم التعليم للمراجعة':'علّم للمراجعة'}</button>`:''}</div>
+<h2 class="qtext">${esc(q.q)}</h2>
+<div class="choices">${choices}</div>
+${locked?`<div class="expbox"><div class="row2"><span class="verdict ${a===q.a?'ok':'bad'}" style="margin:0">${a===q.a?'إجابة صحيحة':'إجابة خاطئة'}</span><button class="btn sm" data-a="exp" data-q="${id}" aria-expanded="${!!S.exp[id]}">شرح تفصيلي</button></div>${S.exp[id]?expHTML(q):''}</div>`:''}
+<div class="actions"><div class="grow">${practice?`<button class="btn" data-a="prev" ${S.cur===0?'disabled':''}>السابق</button>
+<button class="btn primary" data-a="next" ${last?'disabled':''}>التالي</button>`:`<button class="btn primary" data-a="next">${last?'سلّم الاختبار':'السؤال التالي'}</button>`}</div>
+<button class="btn ${last?'gold':''}" data-a="finish">إنهاء وتسليم</button></div>
+</section>
+<aside class="card nav ${S.navOpen?'open':''}"><h3>دليل الأسئلة</h3><div class="cells">${cells}</div>
+<div class="legend"><span><i style="background:${practice?'var(--ok)':'var(--brand)'}"></i>${practice?'صحيحة':'تمت الإجابة'}</span>${practice?'<span><i style="background:var(--bad)"></i>خاطئة</span>':''}<span><i style="background:var(--accent)"></i>للمراجعة</span></div>
+<button class="btn gold" style="width:100%" data-a="finish">إنهاء وتسليم</button></aside>
+</main>
+${S.confirm?confirmHTML():''}`}
+
+function confirmHTML(){const un=N-Object.keys(S.ans).length;
+  return `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="cft"><div class="dialog"><h2 id="cft">تسليم الاختبار؟</h2>
+<p>${un>0?`لديك <b class="num">${un}</b> سؤالاً بدون إجابة، وسيُحتسب كل منها خطأ.`:'أجبت عن جميع الأسئلة.'} بعد التسليم تظهر النتيجة والشرح التفصيلي.</p>
+<div class="row"><button class="btn gold" data-a="submit">سلّم الآن</button><button class="btn" data-a="cancel">العودة للأسئلة</button></div></div></div>`}
+
+/* ---------- result ---------- */
+function renderResult(){
+  const st=stats(),pct=Math.round(st.ok/N*100),pass=pct>=PASS;
+  const C=2*Math.PI*54,dash=C*pct/100;
+  const grade=pct>=90?'ممتاز':pct>=75?'جيد جداً':pct>=PASS?'ناجح':'يحتاج مراجعة';
+  const msg=`جبت ${st.ok} من ${N} (${pct}%) في اختبار ببساطه المحاكي للجهاز المركزي - الحاسب الآلي. عايز أتابع معاك المراجعة.`;
+  const bars=SEC.map((s,i)=>{const x=st.sec[i],p=Math.round(x.ok/x.n*100);
+    return `<div class="brow"><div class="top2"><span>${s}</span><b class="num">${x.ok} / ${x.n}</b></div><div class="bar"><i style="width:${p}%;background:${p>=PASS?'var(--ok)':'var(--bad)'}"></i></div></div>`}).join('');
+  const items=S.order.filter(id=>{const a=S.ans[id],q=Q[id];
+    return S.filter==='all'||(S.filter==='wrong'&&a!==undefined&&a!==q.a)||(S.filter==='skip'&&a===undefined)||(S.filter==='right'&&a===q.a)});
+  const tab=(k,t,n)=>`<button class="tabbtn" data-a="filter" data-f="${k}" aria-pressed="${S.filter===k}">${t} <span class="num">(${n})</span></button>`;
+  const rv=items.map(id=>{const q=Q[id],a=S.ans[id],pos=S.order.indexOf(id)+1,state=a===undefined?'skip':a===q.a?'ok':'bad';
+    const ch=q.c.map((c,i)=>{let cls='choice',tag='';
+      if(i===q.a){cls+=' right';tag='<span class="tag ok">الصحيحة</span>'}
+      else if(i===a){cls+=' wrong';tag='<span class="tag bad">إجابتك</span>'}
+      return `<div class="${cls}" style="cursor:default"><span class="bubble">${L[i]}</span><span class="ctext">${esc(c)}</span>${tag}</div>`}).join('');
+    return `<article class="card rv"><div class="rvh"><span class="rvn ${state==='skip'?'':state} num">${pos}</span><div class="rvq"><small>${SEC[q.s]} · ${state==='ok'?'إجابة صحيحة':state==='bad'?'إجابة خاطئة':'لم تُجب'}</small>${esc(q.q)}</div></div>
+<div class="choices">${ch}</div>
+<div class="expbox"><button class="btn sm" data-a="exp" data-q="${id}" aria-expanded="${!!S.exp[id]}">${S.exp[id]?'إخفاء الشرح':'شرح تفصيلي'}</button>${S.exp[id]?expHTML(q):''}</div></article>`}).join('')
+    ||`<div class="card empty">لا توجد أسئلة في هذا التصنيف.</div>`;
+  return topbar()+`<main class="wrap pad">
+<section class="card res"><div class="ring"><svg viewBox="0 0 130 130" role="img" aria-label="النتيجة ${pct}%"><circle cx="65" cy="65" r="54" fill="none" stroke="var(--line)" stroke-width="12"/>
+<circle cx="65" cy="65" r="54" fill="none" stroke="${pass?'var(--ok)':'var(--bad)'}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${dash} ${C}" transform="rotate(-90 65 65)"/></svg>
+<div class="mid"><b class="num">${pct}%</b><span class="num">${st.ok} من ${N}</span></div></div>
+<div><span class="verdict ${pass?'ok':'bad'}">${pass?'ناجح':'لم تجتز بعد'} · ${grade}</span>
+<h1>${pass?'نتيجة قوية، كمّل المراجعة':'محتاج جولة مراجعة'}</h1>
+<p>${pass?'تخطيت درجة النجاح التدريبية. راجع الأسئلة الخاطئة لتثبيت المعلومة.':'درجة النجاح التدريبية '+PASS+'%. افتح شرح كل سؤال وأعد المحاولة.'}</p>
+<div class="chips"><span class="pill num">صحيحة: ${st.ok}</span><span class="pill num">خاطئة: ${st.bad}</span><span class="pill num">بدون إجابة: ${st.skip}</span>${S.mode==='exam'?`<span class="pill num">الزمن: ${fmt(S.elapsed)}</span>`:''}</div>
+<div class="row2"><button class="btn gold" data-a="retry">إعادة الاختبار</button>
+${st.bad+st.skip>0?`<button class="btn" data-a="filter" data-f="wrong" data-scroll="1">راجع الأخطاء</button>`:''}
+<a class="btn wa" href="${waLink(msg)}" target="_blank" rel="noopener">${WAI}<span>أرسل نتيجتك واتساب</span></a></div></div></section>
+<section class="card"><h2>الأداء حسب المحور</h2><div class="bars">${bars}</div></section>
+<section id="review"><div class="tabs">${tab('all','كل الأسئلة',N)}${tab('wrong','الخاطئة',st.bad)}${tab('skip','بدون إجابة',st.skip)}${tab('right','الصحيحة',st.ok)}</div>${rv}</section>
+<section class="card contact"><h2>محتاج شرح أو مراجعة إضافية؟</h2><p>تواصل مع مستر محمد سيد على الرقم <span class="num ltr" style="font-weight:700;color:var(--ink)">${PHONE}</span></p>
+<a class="btn wa" href="${waLink('مرحباً مستر محمد، أريد الاستفسار عن اختبارات الجهاز المركزي (معلم مساعد - الحاسب الآلي)')}" target="_blank" rel="noopener">${WAI}<span>تواصل عبر واتساب</span></a></section>
+</main>`}
+
+/* ---------- control ---------- */
+function render(){root.innerHTML=S.screen==='start'?renderStart():S.screen==='exam'?renderExam():renderResult()}
+function startExam(){
+  S.order=shuffle(Q.map(q=>q.id).slice()); if(!S.shuffle)S.order.sort((a,b)=>a-b);
+  S.ans={};S.flag={};S.cur=0;S.exp={};S.navOpen=false;S.confirm=false;S.filter='all';S.t0=Date.now();S.qt0=Date.now();S.screen='exam';
+  clearInterval(S.timer); if(S.mode==='exam')S.timer=setInterval(tick,200);
+  render();window.scrollTo(0,0)}
+function tick(){if(S.confirm)return;const ql=Q_SECONDS-(Date.now()-S.qt0)/1000;
+  const t=document.getElementById('timer');if(t){t.textContent=Math.max(0,Math.ceil(ql));t.parentElement.classList.toggle('low',ql<=3)}
+  const b=document.getElementById('qbar');if(b){b.style.width=Math.max(0,ql/Q_SECONDS*100)+'%';b.classList.toggle('low',ql<=3)}
+  if(ql<=0)advance()}
+function advance(){if(S.cur<N-1){S.cur++;S.qt0=Date.now();render();jump()}else submit()}
+function submit(){clearInterval(S.timer);S.elapsed=Math.round((Date.now()-S.t0)/1000);S.confirm=false;S.screen='result';S.filter='all';S.exp={};render();window.scrollTo(0,0)}
+function jump(){const c=document.getElementById('qcard');if(c)c.scrollIntoView({block:'start'})}
+
+document.addEventListener('change',e=>{
+  if(e.target.name==='mode')S.mode=e.target.value;
+  if(e.target.id==='shuf')S.shuffle=e.target.checked});
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const a=b.dataset.a,id=S.order[S.cur];
+  switch(a){
+    case 'start':startExam();break;
+    case 'pick':{const k=+b.dataset.k;if(S.mode==='practice'&&S.ans[id]!==undefined)break;
+      if(S.ans[id]===k&&S.mode==='exam')delete S.ans[id];else S.ans[id]=k;render();break}
+    case 'next':if(S.mode==='exam'){advance();break}if(S.cur<N-1){S.cur++;render();jump()}break;
+    case 'prev':if(S.cur>0){S.cur--;render();jump()}break;
+    case 'go':if(S.mode==='exam')break;S.cur=+b.dataset.n;S.navOpen=false;render();jump();break;
+    case 'flag':S.flag[id]=!S.flag[id];if(!S.flag[id])delete S.flag[id];render();break;
+    case 'navtoggle':S.navOpen=!S.navOpen;render();break;
+    case 'finish':S.confirm=true;S.pauseAt=Date.now();render();break;
+    case 'cancel':S.qt0+=Date.now()-S.pauseAt;S.confirm=false;render();break;
+    case 'submit':submit();break;
+    case 'exp':{const q=+b.dataset.q;S.exp[q]=!S.exp[q];render();break}
+    case 'filter':S.filter=b.dataset.f;render();if(b.dataset.scroll){const r=document.getElementById('review');if(r)r.scrollIntoView()}break;
+    case 'retry':clearInterval(S.timer);S.screen='start';render();window.scrollTo(0,0);break;
+  }});
+render();
+</script>
+</body>
+</html>
